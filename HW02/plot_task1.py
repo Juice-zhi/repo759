@@ -3,10 +3,12 @@
 Usage: python plot_task1.py [timings_file] [output_pdf]
 
 The timings file holds one "n time_ms" pair per line, as written by
-run_task1.sh. Defaults: task1_timings.txt -> task1.pdf.
+run_task1.sh. Defaults: task1_timings.txt -> task1.pdf. A 300 dpi PNG with the
+same name (task1.png) is saved as well, for inserting into assignment2.docx.
 """
 import math
 import sys
+from pathlib import Path
 
 import matplotlib
 
@@ -43,7 +45,7 @@ def main():
     output_file = sys.argv[2] if len(sys.argv) > 2 else "task1.pdf"
     sizes, times = read_timings(timings_file)
 
-    fig, ax = plt.subplots(figsize=(7, 4.5), facecolor=SURFACE)
+    fig, ax = plt.subplots(figsize=(6.5, 4.2), facecolor=SURFACE)
     ax.set_facecolor(SURFACE)
     ax.plot(sizes, times, color=SERIES_COLOR, linewidth=1.5, marker="o", markersize=6,
             markeredgecolor=SURFACE, markeredgewidth=1.5,
@@ -77,8 +79,10 @@ def main():
     ax.tick_params(which="both", color=AXIS_COLOR, labelcolor=TEXT_SECONDARY)
 
     fig.tight_layout()
+    png_file = Path(output_file).with_suffix(".png")
     fig.savefig(output_file)
-    print(f"Saved {output_file}")
+    fig.savefig(png_file, dpi=300)
+    print(f"Saved {output_file} and {png_file}")
 
 
 if __name__ == "__main__":
