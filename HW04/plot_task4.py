@@ -3,8 +3,9 @@
 Usage: python plot_task4.py
 
 Reads task4_timings.txt written by run_task4.sh (one "schedule t time_ms" line
-per run) and saves task4.pdf plus a 300 dpi PNG copy for assignment4.docx. It
-also prints each schedule's timings with the speedup over one thread.
+per run, several runs per configuration) and plots the fastest run of each
+configuration. Saves task4.pdf plus a 300 dpi PNG copy for assignment4.docx and
+prints every run with the speedup of the fastest one over one thread.
 """
 from collections import defaultdict
 
@@ -26,31 +27,34 @@ AXIS_COLOR = "#c3c2b7"
 
 
 def read_timings(path):
-    runs = defaultdict(list)
+    """Returns {schedule: {t: [time_ms of every run]}}."""
+    runs = defaultdict(lambda: defaultdict(list))
     with open(path) as f:
         for line in f:
             fields = line.split()
             if len(fields) >= 3:
-                runs[fields[0]].append((int(fields[1]), float(fields[2])))
-    return {schedule: sorted(points) for schedule, points in runs.items()}
+                runs[fields[0]][int(fields[1])].append(float(fields[2]))
+    return runs
 
 
 def main():
     runs = read_timings("task4_timings.txt")
     schedules = [s for s in SCHEDULES if s in runs]
+    repeats = max(len(times) for s in schedules for times in runs[s].values())
 
     fig, axes = plt.subplots(len(schedules), 1, figsize=(6.5, 2.35 * len(schedules) + 0.6),
                              sharex=True, sharey=True, facecolor=SURFACE, squeeze=False)
     for ax, schedule in zip(axes[:, 0], schedules):
-        ts = [t for t, _ in runs[schedule]]
-        times = [time for _, time in runs[schedule]]
+        ts = sorted(runs[schedule])
+        times = [min(runs[schedule][t]) for t in ts]
         best = min(range(len(times)), key=times.__getitem__)
         base = times[ts.index(1)] if 1 in ts else None
 
-        print(f"{schedule}:\n   t   time (ms)   speedup")
+        print(f"{schedule}:\n   t    fastest (ms)   speedup   all runs (ms)")
         for t, time in zip(ts, times):
-            speedup = f"{base / time:7.2f}x" if base else ""
-            print(f"{t:4d} {time:11.5g}   {speedup}")
+            speedup = f"{base / time:6.2f}x" if base else ""
+            every = ", ".join(f"{run:.6g}" for run in runs[schedule][t])
+            print(f"{t:4d} {time:14.5g}   {speedup:>7}   {every}")
         print()
 
         title = f"{schedule}  ·  fastest: {times[best]:.4g} ms at t = {ts[best]}"
@@ -83,8 +87,10 @@ def main():
                       labelcolor=TEXT_SECONDARY)  # "measured" first
     axes[-1, 0].set_xlabel("number of threads t", color=TEXT_SECONDARY)
     fig.supylabel("time (ms)", color=TEXT_SECONDARY, fontsize=10)
-    fig.suptitle("Problem 4: N-body simulation time vs. number of threads\n"
-                 "N = 100 particles, simulation end time 100",
+    subtitle = "N = 200 particles, simulation end time 100"
+    if repeats > 1:
+        subtitle += f"; each point is the fastest of {repeats} runs"
+    fig.suptitle("Problem 4: N-body simulation time vs. number of threads\n" + subtitle,
                  color=TEXT_PRIMARY, x=0.02, ha="left", fontsize=11)
     fig.tight_layout()
     fig.savefig("task4.pdf")
